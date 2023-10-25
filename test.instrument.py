@@ -1,4 +1,4 @@
-from marimba.core.instrument import BaseInstrument
+from marimba.core.base_instrument import BaseInstrument
 
 
 class TestInstrument(BaseInstrument):
