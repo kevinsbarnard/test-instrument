@@ -32,7 +32,7 @@ class TestInstrument(BaseInstrument):
         }
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
-        n = config.get("n", 3)
+        n = kwargs.get("n", 3)
         try:
             n = int(n)
         except ValueError:
