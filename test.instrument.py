@@ -39,7 +39,7 @@ class TestInstrument(BaseInstrument):
             n = 3
         
         for idx in range(n):
-            self.logger.info(f"Processing {idx+1}/{3}...")
+            self.logger.info(f"Processing {idx+1}/{n}...")
             sleep(1)
     
     def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Tuple[Any, Dict[Path, Path]]:
