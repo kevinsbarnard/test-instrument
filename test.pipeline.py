@@ -50,11 +50,15 @@ class TestPipeline(BasePipeline):
             image_file_paths.extend(data_dir.glob("**/*.jpg"))
             image_file_paths.extend(data_dir.glob("**/*.jpeg"))
         
+        self.logger.debug(f"{image_file_paths=}")
+        
         # Define the path mapping (use old filename stem + random UUID)
         path_mapping = {
-            image_file_path: Path(f"{image_file_path.stem}-{uuid4()}.{image_file_path.suffix}")
+            image_file_path: Path(f"{image_file_path.stem}-{uuid4()}{image_file_path.suffix}")
             for image_file_path in image_file_paths
         }
+        
+        self.logger.debug(f"{path_mapping=}")
         
         # Create the iFDO
         image_set_items = {}
