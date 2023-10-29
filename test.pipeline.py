@@ -1,4 +1,5 @@
 from datetime import datetime
+from shutil import copy2
 from time import sleep
 from uuid import uuid4
 from pathlib import Path
@@ -30,6 +31,12 @@ class TestPipeline(BasePipeline):
             "month": 1,
             "day": 1,
         }
+    
+    def _import(self, data_dir: Path, source_dir: Path, config: Dict[str, Any], **kwargs: dict):
+        self.logger.info(f"Importing data from {source_dir} to {data_dir}")
+        for source_path in source_dir.iterdir():
+            copy2(source_path, data_dir)
+            self.logger.info(f"Copied {source_path} -> {data_dir}")
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
         n = kwargs.get("n", 3)
@@ -42,27 +49,30 @@ class TestPipeline(BasePipeline):
             self.logger.info(f"Processing {idx+1}/{n}...")
             sleep(1)
     
-    def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Tuple[Any, Dict[Path, Path]]:
-        # Find all .png, .jpg, .jpeg files in data_dirs
-        image_file_paths: List[Path] = []
-        for data_dir in data_dirs:
+    def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Tuple[iFDO, Dict[Path, Path]]:
+        # Find all .png, .jpg, .jpeg files in data_dirs and create a mapping from input file path to output file path
+        path_mapping = {}
+        for data_dir, config in zip(data_dirs, configs):
+            year = config.get("year")
+            month = config.get("month")
+            day = config.get("day")
+            output_dir = Path(year) / month / day
+            
+            image_file_paths = []
             image_file_paths.extend(data_dir.glob("**/*.png"))
             image_file_paths.extend(data_dir.glob("**/*.jpg"))
             image_file_paths.extend(data_dir.glob("**/*.jpeg"))
-        
-        self.logger.debug(f"{image_file_paths=}")
-        
-        # Define the path mapping (use old filename stem + random UUID)
-        path_mapping = {
-            image_file_path: Path(f"{image_file_path.stem}-{uuid4()}{image_file_path.suffix}")
-            for image_file_path in image_file_paths
-        }
+            
+            for image_file_path in image_file_paths:
+                output_name = f"{image_file_path.stem}-{uuid4()}{image_file_path.suffix}"
+                output_file_path = output_dir / output_name
+                path_mapping[image_file_path] = output_file_path
         
         self.logger.debug(f"{path_mapping=}")
         
         # Create the iFDO
         image_set_items = {}
-        for image_file_path in image_file_paths:
+        for image_file_path in path_mapping:
             file_created_datetime = datetime.fromtimestamp(image_file_path.stat().st_ctime)
             image_set_items[str(path_mapping[image_file_path])] = ImageData(
                 image_datetime=file_created_datetime
