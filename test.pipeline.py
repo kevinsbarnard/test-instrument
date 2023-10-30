@@ -32,12 +32,16 @@ class TestPipeline(BasePipeline):
             "day": 1,
         }
     
-    def _import(self, data_dir: Path, source_dir: Path, config: Dict[str, Any], **kwargs: dict):
-        self.logger.info(f"Importing data from {source_dir} to {data_dir}")
-        for source_path in source_dir.glob("**/*"):
-            if source_path.is_file() and source_path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-                copy2(source_path, data_dir)
-            self.logger.info(f"Copied {source_path} -> {data_dir}")
+    def _import(self, data_dir: Path, source_paths: List[Path], config: Dict[str, Any], **kwargs: dict):
+        self.logger.info(f"Importing data from {source_paths=} to {data_dir}")
+        for source_path in source_paths:
+            if not source_path.is_dir():
+                continue
+            
+            for source_file in source_path.glob("**/*"):
+                if source_file.is_file() and source_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                    copy2(source_file, data_dir)
+                    self.logger.info(f"Copied {source_file.resolve().absolute()} -> {data_dir}")
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
         n = kwargs.get("n", 3)
