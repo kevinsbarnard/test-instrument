@@ -34,8 +34,9 @@ class TestPipeline(BasePipeline):
     
     def _import(self, data_dir: Path, source_dir: Path, config: Dict[str, Any], **kwargs: dict):
         self.logger.info(f"Importing data from {source_dir} to {data_dir}")
-        for source_path in source_dir.iterdir():
-            copy2(source_path, data_dir)
+        for source_path in source_dir.glob("**/*"):
+            if source_path.is_file() and source_path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                copy2(source_path, data_dir)
             self.logger.info(f"Copied {source_path} -> {data_dir}")
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
@@ -53,9 +54,9 @@ class TestPipeline(BasePipeline):
         # Find all .png, .jpg, .jpeg files in data_dirs and create a mapping from input file path to output file path
         path_mapping = {}
         for data_dir, config in zip(data_dirs, configs):
-            year = config.get("year")
-            month = config.get("month")
-            day = config.get("day")
+            year = str(config.get("year"))
+            month = str(config.get("month"))
+            day = str(config.get("day"))
             output_dir = Path(year) / month / day
             
             image_file_paths = []
