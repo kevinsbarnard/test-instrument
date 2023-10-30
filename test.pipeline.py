@@ -25,7 +25,7 @@ class TestPipeline(BasePipeline):
         }
     
     @staticmethod
-    def get_deployment_config_schema() -> dict:
+    def get_collection_config_schema() -> dict:
         return {
             "year": 2020,
             "month": 1,
@@ -41,7 +41,7 @@ class TestPipeline(BasePipeline):
             for source_file in source_path.glob("**/*"):
                 if source_file.is_file() and source_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
                     copy2(source_file, data_dir)
-                    self.logger.info(f"Copied {source_file.resolve().absolute()} -> {data_dir}")
+                    self.logger.debug(f"Copied {source_file.resolve().absolute()} -> {data_dir}")
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
         n = kwargs.get("n", 3)
@@ -54,14 +54,14 @@ class TestPipeline(BasePipeline):
             self.logger.info(f"Processing {idx+1}/{n}...")
             sleep(1)
     
-    def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Tuple[iFDO, Dict[Path, Path]]:
+    def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Dict[Path, Tuple[Path, List[ImageData]]]:
         # Find all .png, .jpg, .jpeg files in data_dirs and create a mapping from input file path to output file path
-        path_mapping = {}
+        data_mapping = {}
         for data_dir, config in zip(data_dirs, configs):
             year = str(config.get("year"))
             month = str(config.get("month"))
             day = str(config.get("day"))
-            output_dir = Path(year) / month / day
+            output_dir = Path(f"{year:0>4}") / f"{month:0>2}" / f"{day:0>2}"
             
             image_file_paths = []
             image_file_paths.extend(data_dir.glob("**/*.png"))
@@ -71,25 +71,16 @@ class TestPipeline(BasePipeline):
             for image_file_path in image_file_paths:
                 output_name = f"{image_file_path.stem}-{uuid4()}{image_file_path.suffix}"
                 output_file_path = output_dir / output_name
-                path_mapping[image_file_path] = output_file_path
+                
+                file_created_datetime = datetime.fromtimestamp(image_file_path.stat().st_ctime)
+                image_data_list = [  # in iFDO, the image data list for an image is a list containing single ImageData
+                    ImageData(
+                        image_datetime=file_created_datetime
+                    )
+                ]
+                
+                data_mapping[image_file_path] = output_file_path, image_data_list
         
-        self.logger.debug(f"{path_mapping=}")
+        self.logger.debug(f"{data_mapping=}")
         
-        # Create the iFDO
-        image_set_items = {}
-        for image_file_path in path_mapping:
-            file_created_datetime = datetime.fromtimestamp(image_file_path.stat().st_ctime)
-            image_set_items[str(path_mapping[image_file_path])] = ImageData(
-                image_datetime=file_created_datetime
-            )
-        
-        ifdo = iFDO(
-            image_set_header=ImageSetHeader(
-                image_set_name=f"Test Pipeline Dataset",
-                image_set_uuid=str(uuid4()),
-                image_set_handle="test_pipeline",
-            ),
-            image_set_items=image_set_items,
-        )
-        
-        return ifdo, path_mapping
+        return data_mapping
