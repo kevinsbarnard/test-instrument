@@ -5,7 +5,7 @@ from uuid import uuid4
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from ifdo.models import iFDO, ImageSetHeader, ImageData
+from ifdo.models import ImageData
 
 from marimba.core.pipeline import BasePipeline
 
@@ -40,7 +40,8 @@ class TestPipeline(BasePipeline):
             
             for source_file in source_path.glob("**/*"):
                 if source_file.is_file() and source_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-                    copy2(source_file, data_dir)
+                    if not self.dry_run:
+                        copy2(source_file, data_dir)
                     self.logger.debug(f"Copied {source_file.resolve().absolute()} -> {data_dir}")
 
     def _process(self, data_dir: Path, config: Dict[str, Any], **kwargs: dict):
@@ -52,7 +53,8 @@ class TestPipeline(BasePipeline):
         
         for idx in range(n):
             self.logger.info(f"Processing {idx+1}/{n}...")
-            sleep(1)
+            if not self.dry_run:
+                sleep(1)  # Pretend to do something
     
     def _compose(self, data_dirs: List[Path], configs: List[Dict[str, Any]], **kwargs: dict) -> Dict[Path, Tuple[Path, List[ImageData]]]:
         # Find all .png, .jpg, .jpeg files in data_dirs and create a mapping from input file path to output file path
@@ -80,7 +82,5 @@ class TestPipeline(BasePipeline):
                 ]
                 
                 data_mapping[image_file_path] = output_file_path, image_data_list
-        
-        self.logger.debug(f"{data_mapping=}")
         
         return data_mapping
